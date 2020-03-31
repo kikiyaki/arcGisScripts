@@ -70,36 +70,19 @@ class Tool(object):
 
     def execute(self, parameters, messages):
 		
-		vol = parameters[0].value
-		h = parameters[1].value
-		deltaR = parameters[2].value
+		startX = 117
+		startY = 56
+		points = []
 		
-		sMax = vol/h
-		"""Current radius"""
-		r = 0
-		"""Current surface area"""
-		s = 0
+		for x in range(10):
+			points.append([])
+			for y in range(10):
+				points[x].append(["coord" : "123", "value" : "1312123123"])
+				
+		arcpy.AddMessage(points)
 		
-		'''arcpy.env.workspace = "C:\arc\My\DB.gdb"'''
-		arcpy.Buffer_analysis("StartPoint", "C:\arc\My\DB.gdb\Buffer6", "15 Meters")
-		
-		# get the map document
-		mxd = arcpy.mapping.MapDocument("CURRENT")
-
-		# get the data frame
-		#df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
-
-		# create a new layer
-		#newlayer = arcpy.mapping.Layer("C:\Users\i am kerel\Documents\ArcGIS\Default.gdb\StartPoint_Buffer10")
-
-		# add the layer to the map at the bottom of the TOC in data frame 0
-		#arcpy.mapping.AddLayer(df, newlayer,"BOTTOM")
-		
-		while s < sMax:
-			r += deltaR
-			s = 3.14 * pow(r, 2)
-			arcpy.AddMessage("Surface area:")
-			arcpy.AddMessage(s)
-			
+		result = arcpy.GetCellValue_management("C:/arc/srtm_60_01/srtm_60_01.tif", str(startX) + " " + str(startY))
+		cellSize = int(result.getOutput(0))
+		arcpy.AddMessage(cellSize)
 		
 		return
