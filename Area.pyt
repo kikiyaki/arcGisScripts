@@ -77,12 +77,15 @@ class Tool(object):
 		for x in range(10):
 			points.append([])
 			for y in range(10):
-				points[x].append(["coord" : "123", "value" : "1312123123"])
-				
-		arcpy.AddMessage(points)
+				result = arcpy.GetCellValue_management("C:/arc/srtm_60_01/srtm_60_01.tif", str(startX+float(x)/10) + " " + str(startY+float(x)/10))
+				height = int(result.getOutput(0))
+				point = {
+					"coord" : {"x" : (startX+float(x)/10), "y" : startY+float(x)/10},
+					"height" : height
+					}
+				points[x].append(point)
+				(points)
 		
-		result = arcpy.GetCellValue_management("C:/arc/srtm_60_01/srtm_60_01.tif", str(startX) + " " + str(startY))
-		cellSize = int(result.getOutput(0))
-		arcpy.AddMessage(cellSize)
+		arcpy.AddMessage(points)
 		
 		return
