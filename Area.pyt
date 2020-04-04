@@ -76,28 +76,50 @@ class Tool(object):
 						"height" : pointHeight
 					  }
 		"""
-		points = []
+		points = {}
 		
 		for x in range(11):
-			points.append([])
+			points[x] = {}
 			for y in range(11):
-				result = arcpy.GetCellValue_management("C:/arc/srtm_60_01/srtm_60_01.tif", str(startX+delta*(x-5)) + " " + str(startY+delta*(y-5)))
+				result = arcpy.GetCellValue_management(file, str(startX+delta*(x-5)) + " " + str(startY+delta*(y-5)))
 				height = int(result.getOutput(0))
 				point = {
 					"coord" : {"x" : startX+delta*(x-5), "y" : startY+delta*(y-5)},
 					"height" : height
 					}
-				points[x].append(point)
-		
+				points[x][y] = point
+
 		return points
 
     def neighbors(self, x, y, points):
-		neighbors = []
-		
-		neighbors.append(points[x-1][y])
-		neighbors.append(points[x][y+1])
-		neighbors.append(points[x+1][y])
-		neighbors.append(points[x][y-1])
+		neighbors = {}
+
+		neighbors[x-1] = {}
+		neighbors[x] = {}
+		neighbors[x+1] = {}
+
+		if (x-1) in points:
+			if y in points[x-1]:
+				neighbors[x - 1][y] = points[x - 1][y]
+
+		if x in points:
+			if (y-1) in points[x]:
+				neighbors[x][y+1] = points[x][y+1]
+
+		if (x+1) in points:
+			if y in points[x+1]:
+				neighbors[x+1][y] = points[x+1][y]
+
+		if x in points:
+			if y-1 in points[x]:
+				neighbors[x][y-1] = points[x][y-1]
+
+		if neighbors[x-1] == {}:
+			del neighbors[x-1]
+		if neighbors[x] == {}:
+			del neighbors[x]
+		if neighbors[x+1] == {}:
+			del neighbors[x+1]
 		
 		return neighbors
 
@@ -108,7 +130,7 @@ class Tool(object):
 		file = "C:/arc/srtm_60_01/srtm_60_01.tif"
 	
 		grid = self.heightGrid(startX, startY, delta, file)
-		
+
 		arcpy.AddMessage(self.neighbors(5,5,grid))
 	
 		return
