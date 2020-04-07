@@ -91,6 +91,28 @@ class Tool(object):
 
 		return points
 
+    def neighborsFromDict(self, points, all_points):
+		neighbors = {}
+
+		for x in points:
+			for y in points[x]:
+				current_point_neighbors = self.neighbors(x, y, all_points)
+				for cur_x in current_point_neighbors:
+					for cur_y in current_point_neighbors[cur_x]:
+						#Добавить точку-соседа только если она не входит в массив точек, вокруг которых ищем соседей
+						if cur_x not in points:
+							if cur_x not in neighbors:
+								neighbors[cur_x] = {}
+							neighbors[cur_x][cur_y] = current_point_neighbors[cur_x][cur_y]
+						else:
+							if cur_y not in points[cur_x]:
+								if cur_x not in neighbors:
+									neighbors[cur_x] = {}
+								neighbors[cur_x][cur_y] = current_point_neighbors[cur_x][cur_y]
+
+
+		return neighbors
+
     def neighbors(self, x, y, points):
 		neighbors = {}
 
@@ -131,8 +153,8 @@ class Tool(object):
 	
 		grid = self.heightGrid(startX, startY, delta, file)
 
-		arcpy.AddMessage(self.neighbors(5,5,grid))
-	
+		test_points = {5:{5:{}}, 6:{5:{}}}
+		arcpy.AddMessage(self.neighborsFromDict(test_points, grid))
 		return
 
 
