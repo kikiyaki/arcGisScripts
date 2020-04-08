@@ -1,7 +1,7 @@
 import arcpy
 import math
 import time
-
+import sys
 
 class Toolbox(object):
     def __init__(self):
@@ -68,23 +68,42 @@ class Tool(object):
         parameter.  This method is called after internal validation."""
         return
 
+    def max_height(self, points):
+		"""
+		Находит максимальную высоту массива точек
+		:param points: массив(словарь) точек
+		:return:
+		"""
+		max_height = -1000000.
+		for x in points:
+			for y in points[x]:
+				if points[x][y]["height"] > max_height:
+					max_height = points[x][y]["height"]
+		return max_height
+
     def heightGrid(self, startX, startY, delta, file):
 		"""
-		returns two diemensional array like:
+		Возвращает двумерный массив(словарь) точек вида:
 		grid[i][k] = {
-						"coord" : {"x" : xCoord, "y" : yCoord}, 
+						"coord" : {"x" : xCoord, "y" : yCoord},
 						"height" : pointHeight
 					  }
+		i - порядковый номер точки по оси X
+		k - порядковый номер точки по оси Y
+
+		:param startX: :param startY: начальные координаты точки, вокруг которой строится массив точек
+		:param delta: промежуток между точками в градусах координат
+		:param file: полный путь к файлу из которого берутся высоты
 		"""
 		points = {}
 		
-		for x in range(11):
+		for x in range(41):
 			points[x] = {}
-			for y in range(11):
-				result = arcpy.GetCellValue_management(file, str(startX+delta*(x-5)) + " " + str(startY+delta*(y-5)))
+			for y in range(41):
+				result = arcpy.GetCellValue_management(file, str(startX+delta*(x-20)) + " " + str(startY+delta*(y-20)))
 				height = int(result.getOutput(0))
 				point = {
-					"coord" : {"x" : startX+delta*(x-5), "y" : startY+delta*(y-5)},
+					"coord" : {"x" : startX+delta*(x-20), "y" : startY+delta*(y-20)},
 					"height" : height
 					}
 				points[x][y] = point
@@ -92,8 +111,14 @@ class Tool(object):
 		return points
 
     def neighborsFromDict(self, points, all_points):
+		"""
+		Возвращает массив(словарь) точек-соседей для массива точек
+		Точки для которых ищем соседей не попадают в массив соседей
+		:param points: массив точек вокруг которых ищем соседей
+		:param all_points: массив точек в которых ищем соседей
+		:return:
+		"""
 		neighbors = {}
-
 		for x in points:
 			for y in points[x]:
 				current_point_neighbors = self.neighbors(x, y, all_points)
@@ -114,6 +139,12 @@ class Tool(object):
 		return neighbors
 
     def neighbors(self, x, y, points):
+		"""
+		Возвращает массив(словарь) четырех точек-соседей
+		:param x: порядковый номер точки по оси X
+		:param y: порядковый номер точки по оси Y
+		:param points: массив точек в которых ищем соседей
+		"""
 		neighbors = {}
 
 		neighbors[x-1] = {}
@@ -125,7 +156,7 @@ class Tool(object):
 				neighbors[x - 1][y] = points[x - 1][y]
 
 		if x in points:
-			if (y-1) in points[x]:
+			if (y+1) in points[x]:
 				neighbors[x][y+1] = points[x][y+1]
 
 		if (x+1) in points:
@@ -145,29 +176,69 @@ class Tool(object):
 		
 		return neighbors
 
+    def filled_points(self, all_points, filled_points, total_v, delta_v):
+		"""
+		Возвращает массив(словарь) заполненных жидкостью точек
+		:param all_points: массив всех определенных точек пространства
+		:param filled_points: массив изначально заполненных точек
+		:param total_v: общий объем растекаемой жидкости
+		:param delta_v: объем, который вмещает одна клетка(точка)
+		:return:
+		"""
+		max_filled_height = self.max_height(filled_points)
+		neighbors = self.neighborsFromDict(filled_points, all_points)
+		for x in neighbors:
+			for y in neighbors[x]:
+				height = neighbors[x][y]["height"]
+				if total_v <= 0:
+					return filled_points
+				else:
+					if height <= max_filled_height:
+						#Заполнение точки
+						if x not in filled_points:
+							filled_points[x] = {}
+						filled_points[x][y] = neighbors[x][y]
+						del all_points[x][y]
+						total_v = total_v - delta_v
+		return self.filled_points(all_points, filled_points, total_v, delta_v)
+
+    def draw_points(self, points):
+		"""
+		Отрисовывает точки на карте
+		:param points: массив(словарь) точек
+		:return:
+		"""
+		fc = "C:/arc/My/DB.gdb/point/points"
+		cursor = arcpy.da.InsertCursor(fc, ["SHAPE@XY"])
+		for x in points:
+			for y in points[x]:
+				xy = (points[x][y]["coord"]["x"], points[x][y]["coord"]["y"])
+				cursor.insertRow([xy])
+
     def execute(self, parameters, messages):
+
+		sys.setrecursionlimit(2000)
+
 		startX = 117
 		startY = 56
-		delta = 0.1
+		delta = 0.007
 		file = "C:/arc/srtm_60_01/srtm_60_01.tif"
-	
-		grid = self.heightGrid(startX, startY, delta, file)
+		'''
+		Точки для тестирования(сейчас не используются)
+		all_points = {2:{2:{"height": 60}, 3:{"height": 70}, 4:{"height": 80}, 5:{"height": 60}},
+					  3:{2:{"height": 60}, 3:{"height": 110}, 4:{"height": 100}, 5:{"height": 80}},
+					  4:{2:{"height": 60}, 3:{"height": 80}, 4:{"height": 110}, 5:{"height": 80}},
+					  5:{2:{"height": 50}, 3:{"height": 60}, 4:{"height": 60}, 5:{"height": 60}}}
+		filled_points = {3:{4:{"height": 100}}}
+		'''
 
-		test_points = {5:{5:{}}, 6:{5:{}}}
-		arcpy.AddMessage(self.neighborsFromDict(test_points, grid))
+		all_points = self.heightGrid(startX, startY, delta, file)
+		filled_points = {20:{}}
+		filled_points[20][20] = all_points[20][20]
+		total_v = 20
+		delta_v = 1
+		filled_points = self.filled_points(all_points,filled_points,total_v,delta_v)
+		arcpy.AddMessage(filled_points)
+		self.draw_points(filled_points)
+
 		return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
