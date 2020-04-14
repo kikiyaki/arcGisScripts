@@ -202,6 +202,46 @@ class Tool(object):
 						total_v = total_v - delta_v
 		return self.filled_points(all_points, filled_points, total_v, delta_v)
 
+    def print_points(self, points):
+		"""
+		Отладочная функция
+		Выводит в сообщения точки в виде:
+		|x-y-height|
+		|0-0-1000||1-0-1200|
+		|0-1-1900||1-1-1300|
+		:param points:
+		:return:
+		"""
+		max_x = 0
+		max_y = 0
+		for x in points:
+			if x > max_x:
+				max_x = x
+			for y in points[x]:
+				if y > max_y:
+					max_y = y
+		arcpy.AddMessage("Print points:+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+		for x in range(0, max_x + 1):
+			row = ""
+			for y in range(0, max_y + 1):
+				point_not_exist = True
+				if x in points:
+					if y in points[x]:
+						point_not_exist = False
+						row = \
+							row \
+							+ "|" \
+							+ str.rjust(str(x), 3, "0") \
+							+ "-" \
+							+ str.rjust(str(y), 3, "0") \
+							+ "-" \
+							+ str.rjust(str(points[x][y]["height"]), 4, "0") \
+							+ "|"
+				if point_not_exist:
+					row = row + "|xxx-xxx-xxxx|"
+			arcpy.AddMessage(row)
+
+
     def draw_points(self, points):
 		"""
 		Отрисовывает точки на карте
@@ -233,12 +273,13 @@ class Tool(object):
 		'''
 
 		all_points = self.heightGrid(startX, startY, delta, file)
-		filled_points = {20:{}}
-		filled_points[20][20] = all_points[20][20]
-		total_v = 20
-		delta_v = 1
-		filled_points = self.filled_points(all_points,filled_points,total_v,delta_v)
-		arcpy.AddMessage(filled_points)
-		self.draw_points(filled_points)
+		self.print_points(all_points)
+		#filled_points = {20:{}}
+		#filled_points[20][20] = all_points[20][20]
+		#total_v = 20
+		#delta_v = 1
+		#filled_points = self.filled_points(all_points,filled_points,total_v,delta_v)
+		#arcpy.AddMessage(filled_points)
+		#self.draw_points(filled_points)
 
 		return
