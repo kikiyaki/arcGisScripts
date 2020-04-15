@@ -4,26 +4,29 @@ import time
 import sys
 
 class Toolbox(object):
-    def __init__(self):
-        """Define the toolbox (the name of the toolbox is the name of the
-        .pyt file)."""
-        self.label = "Toolbox"
-        self.alias = ""
+	def __init__(self):
+		"""Define the toolbox (the name of the toolbox is the name of the
+		.pyt file)."""
+		self.label = "Toolbox"
+		self.alias = ""
 
-        # List of tool classes associated with this toolbox
-        self.tools = [Tool]
+		# List of tool classes associated with this toolbox
+		self.tools = [Tool]
 
 
 class Tool(object):
-    def __init__(self):
-        """Define the tool (tool name is the name of the class)."""
-        self.label = "Tool"
-        self.description = ""
-        self.canRunInBackground = False
+	filled_points_len = -1
+	new_filled_points_len = 0
 
-    def getParameterInfo(self):
-    #Define parameter definitions
-    # First parameter
+	def __init__(self):
+		"""Define the tool (tool name is the name of the class)."""
+		self.label = "Tool"
+		self.description = ""
+		self.canRunInBackground = False
+
+	def getParameterInfo(self):
+	#Define parameter definitions
+	# First parameter
 		param0 = arcpy.Parameter(
 			displayName="V",
 			name="vol",
@@ -53,22 +56,22 @@ class Tool(object):
 			
 		return [param0, param1, param2]
 
-    def isLicensed(self):
-        """Set whether tool is licensed to execute."""
-        return True
+	def isLicensed(self):
+		"""Set whether tool is licensed to execute."""
+		return True
 
-    def updateParameters(self, parameters):
-        """Modify the values and properties of parameters before internal
-        validation is performed.  This method is called whenever a parameter
-        has been changed."""
-        return
+	def updateParameters(self, parameters):
+		"""Modify the values and properties of parameters before internal
+		validation is performed.  This method is called whenever a parameter
+		has been changed."""
+		return
 
-    def updateMessages(self, parameters):
-        """Modify the messages created by internal validation for each tool
-        parameter.  This method is called after internal validation."""
-        return
+	def updateMessages(self, parameters):
+		"""Modify the messages created by internal validation for each tool
+		parameter.  This method is called after internal validation."""
+		return
 
-    def max_height(self, points):
+	def max_height(self, points):
 		"""
 		Находит максимальную высоту массива точек
 		:param points: массив(словарь) точек
@@ -81,7 +84,7 @@ class Tool(object):
 					max_height = points[x][y]["height"]
 		return max_height
 
-    def heightGrid(self, startX, startY, delta, file):
+	def heightGrid(self, startX, startY, delta, file):
 		"""
 		Возвращает двумерный массив(словарь) точек вида:
 		grid[i][k] = {
@@ -97,20 +100,20 @@ class Tool(object):
 		"""
 		points = {}
 		
-		for x in range(41):
+		for x in range(21):
 			points[x] = {}
-			for y in range(41):
-				result = arcpy.GetCellValue_management(file, str(startX+delta*(x-20)) + " " + str(startY+delta*(y-20)))
+			for y in range(21):
+				result = arcpy.GetCellValue_management(file, str(startX+delta*(x-10)) + " " + str(startY+delta*(y-10)))
 				height = int(result.getOutput(0))
 				point = {
-					"coord" : {"x" : startX+delta*(x-20), "y" : startY+delta*(y-20)},
+					"coord" : {"x" : startX+delta*(x-10), "y" : startY+delta*(y-10)},
 					"height" : height
 					}
 				points[x][y] = point
 
 		return points
 
-    def neighborsFromDict(self, points, all_points):
+	def neighborsFromDict(self, points, all_points):
 		"""
 		Возвращает массив(словарь) точек-соседей для массива точек
 		Точки для которых ищем соседей не попадают в массив соседей
@@ -138,7 +141,7 @@ class Tool(object):
 
 		return neighbors
 
-    def neighbors(self, x, y, points):
+	def neighbors(self, x, y, points):
 		"""
 		Возвращает массив(словарь) четырех точек-соседей
 		:param x: порядковый номер точки по оси X
@@ -176,7 +179,7 @@ class Tool(object):
 		
 		return neighbors
 
-    def filled_points(self, all_points, filled_points, total_v, delta_v):
+	def filled_points(self, all_points, filled_points, total_v, delta_v):
 		"""
 		Возвращает массив(словарь) заполненных жидкостью точек
 		:param all_points: массив всех определенных точек пространства
@@ -185,6 +188,8 @@ class Tool(object):
 		:param delta_v: объем, который вмещает одна клетка(точка)
 		:return:
 		"""
+		self.filled_points_len = self.new_filled_points_len
+		self.new_filled_points_len = len(filled_points)
 		max_filled_height = self.max_height(filled_points)
 		neighbors = self.neighborsFromDict(filled_points, all_points)
 		for x in neighbors:
@@ -200,68 +205,48 @@ class Tool(object):
 						filled_points[x][y] = neighbors[x][y]
 						del all_points[x][y]
 						total_v = total_v - delta_v
-		return self.filled_points(all_points, filled_points, total_v, delta_v)
 
-    def print_points(self, points):
-		"""
-		Отладочная функция
-		Выводит в сообщения точки в виде:
-		|x-y-height|
-		|0-0-1000||1-0-1200|
-		|0-1-1900||1-1-1300|
-		:param points:
-		:return:
-		"""
-		max_x = 0
-		max_y = 0
-		for x in points:
-			if x > max_x:
-				max_x = x
-			for y in points[x]:
-				if y > max_y:
-					max_y = y
-		arcpy.AddMessage("Print points:+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-		for x in range(0, max_x + 1):
-			row = ""
-			for y in range(0, max_y + 1):
-				point_not_exist = True
-				if x in points:
-					if y in points[x]:
-						point_not_exist = False
-						row = \
-							row \
-							+ "|" \
-							+ str.rjust(str(x), 3, "0") \
-							+ "-" \
-							+ str.rjust(str(y), 3, "0") \
-							+ "-" \
-							+ str.rjust(str(points[x][y]["height"]), 4, "0") \
-							+ "|"
-				if point_not_exist:
-					row = row + "|xxx-xxx-xxxx|"
-			arcpy.AddMessage(row)
+		if self.filled_points_len == self.new_filled_points_len:
+			self.draw_all_points(all_points)
+			return filled_points
+		new_filled_points = self.filled_points(all_points, filled_points, total_v, delta_v)
+		self.new_filled_points_len = len(new_filled_points)
+		return new_filled_points
 
-
-    def draw_points(self, points):
+	def draw_all_points(self, points):
 		"""
 		Отрисовывает точки на карте
 		:param points: массив(словарь) точек
 		:return:
 		"""
-		fc = "C:/arc/My/DB.gdb/point/points"
+		fc = "C:/arc/My/DB.gdb/point/all_points"
 		cursor = arcpy.da.InsertCursor(fc, ["SHAPE@XY"])
 		for x in points:
 			for y in points[x]:
 				xy = (points[x][y]["coord"]["x"], points[x][y]["coord"]["y"])
 				cursor.insertRow([xy])
 
-    def execute(self, parameters, messages):
+
+	def draw_filled_points(self, points):
+		"""
+		Отрисовывает точки на карте
+		:param points: массив(словарь) точек
+		:return:
+		"""
+		fc = "C:/arc/My/DB.gdb/point/filled_points"
+		cursor = arcpy.da.InsertCursor(fc, ["SHAPE@XY"])
+		for x in points:
+			for y in points[x]:
+				xy = (points[x][y]["coord"]["x"], points[x][y]["coord"]["y"])
+				cursor.insertRow([xy])
+
+	def execute(self, parameters, messages):
 
 		sys.setrecursionlimit(2000)
 
 		startX = 117
 		startY = 56
-		delta = 0.007
+		delta = 0.005
 		file = "C:/arc/srtm_60_01/srtm_60_01.tif"
 		'''
 		Точки для тестирования(сейчас не используются)
@@ -273,13 +258,13 @@ class Tool(object):
 		'''
 
 		all_points = self.heightGrid(startX, startY, delta, file)
-		self.print_points(all_points)
-		#filled_points = {20:{}}
-		#filled_points[20][20] = all_points[20][20]
-		#total_v = 20
-		#delta_v = 1
-		#filled_points = self.filled_points(all_points,filled_points,total_v,delta_v)
-		#arcpy.AddMessage(filled_points)
-		#self.draw_points(filled_points)
+		#self.print_points(all_points)
+		filled_points = {10:{}}
+		filled_points[10][10] = all_points[10][10]
+		total_v = 20
+		delta_v = 1
+		filled_points = self.filled_points(all_points,filled_points,total_v,delta_v)
+		arcpy.AddMessage(filled_points)
+		self.draw_filled_points(filled_points)
 
 		return
