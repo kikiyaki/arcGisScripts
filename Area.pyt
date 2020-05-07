@@ -17,6 +17,7 @@ class Toolbox(object):
 class Tool(object):
 	filled_points_len = -1
 	new_filled_points_len = 0
+	i = 0
 
 	def __init__(self):
 		"""Define the tool (tool name is the name of the class)."""
@@ -48,11 +49,9 @@ class Tool(object):
 		param2 = arcpy.Parameter(
 			displayName="delta R",
 			name="Radius increment",
-			datatype="GPDouble",
+			datatype="GPFeatureLayer",
 			parameterType="Required",
 			direction="Input")
-			
-		param2.value=5
 			
 		return [param0, param1, param2]
 
@@ -100,13 +99,13 @@ class Tool(object):
 		"""
 		points = {}
 		
-		for x in range(21):
+		for x in range(201):
 			points[x] = {}
-			for y in range(21):
-				result = arcpy.GetCellValue_management(file, str(startX+delta*(x-10)) + " " + str(startY+delta*(y-10)))
+			for y in range(201):
+				result = arcpy.GetCellValue_management(file, str(startX+delta*(x-100)) + " " + str(startY+delta*(y-100)))
 				height = int(result.getOutput(0))
 				point = {
-					"coord" : {"x" : startX+delta*(x-10), "y" : startY+delta*(y-10)},
+					"coord" : {"x" : startX+delta*(x-100), "y" : startY+delta*(y-100)},
 					"height" : height
 					}
 				points[x][y] = point
@@ -189,7 +188,8 @@ class Tool(object):
 		:return:
 		"""
 		self.filled_points_len = self.new_filled_points_len
-		self.new_filled_points_len = len(filled_points)
+		self.new_filled_points_len = self.points_count(filled_points)
+
 		max_filled_height = self.max_height(filled_points)
 		neighbors = self.neighborsFromDict(filled_points, all_points)
 		for x in neighbors:
@@ -208,9 +208,10 @@ class Tool(object):
 
 		if self.filled_points_len == self.new_filled_points_len:
 			self.draw_all_points(all_points)
+			self.draw_neighbor_points(neighbors)
 			return filled_points
 		new_filled_points = self.filled_points(all_points, filled_points, total_v, delta_v)
-		self.new_filled_points_len = len(new_filled_points)
+
 		return new_filled_points
 
 	def draw_all_points(self, points):
@@ -240,13 +241,33 @@ class Tool(object):
 				xy = (points[x][y]["coord"]["x"], points[x][y]["coord"]["y"])
 				cursor.insertRow([xy])
 
+	def draw_neighbor_points(self, points):
+		"""
+		Отрисовывает точки на карте
+		:param points: массив(словарь) точек
+		:return:
+		"""
+		fc = "C:/arc/My/DB.gdb/point/neighbor_points"
+		cursor = arcpy.da.InsertCursor(fc, ["SHAPE@XY"])
+		for x in points:
+			for y in points[x]:
+				xy = (points[x][y]["coord"]["x"], points[x][y]["coord"]["y"])
+				cursor.insertRow([xy])
+
+	def points_count(self, points):
+		i = 0
+		for x in points:
+			for y in points[x]:
+				i = i + 1
+		return i
+
 	def execute(self, parameters, messages):
 
-		sys.setrecursionlimit(2000)
+		sys.setrecursionlimit(10000)
 
 		startX = 117
 		startY = 56
-		delta = 0.005
+		delta = 0.0008
 		file = "C:/arc/srtm_60_01/srtm_60_01.tif"
 		'''
 		Точки для тестирования(сейчас не используются)
@@ -259,12 +280,20 @@ class Tool(object):
 
 		all_points = self.heightGrid(startX, startY, delta, file)
 		#self.print_points(all_points)
-		filled_points = {10:{}}
-		filled_points[10][10] = all_points[10][10]
-		total_v = 20
+		filled_points = {100:{}}
+		filled_points[100][100] = all_points[100][100]
+		total_v = 1000
 		delta_v = 1
 		filled_points = self.filled_points(all_points,filled_points,total_v,delta_v)
-		arcpy.AddMessage(filled_points)
 		self.draw_filled_points(filled_points)
 
 		return
+
+	###
+#
+#  На последнем этипе перед выходом из цикла, посмотреть соседей всех заполненных точек
+#  и понять почему они не заполняются (и соответствуют ли реальным соседям)
+#
+# Почему-то
+##
+
