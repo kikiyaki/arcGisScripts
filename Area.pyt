@@ -29,31 +29,24 @@ class Tool(object):
 	#Define parameter definitions
 	# First parameter
 		param0 = arcpy.Parameter(
-			displayName="V",
-			name="vol",
+			displayName="Start point X coordinate",
+			name="x0",
 			datatype="GPDouble",
 			parameterType="Required",
 			direction="Input")
 			
-		param0.value=5
+		param0.value = 117
 			
 		param1 = arcpy.Parameter(
-			displayName="h",
-			name="h",
+			displayName="Start point Y coordinate",
+			name="y0",
 			datatype="GPDouble",
 			parameterType="Required",
 			direction="Input")
 			
-		param1.value=5
-		
-		param2 = arcpy.Parameter(
-			displayName="delta R",
-			name="Radius increment",
-			datatype="GPFeatureLayer",
-			parameterType="Required",
-			direction="Input")
+		param1.value = 56
 			
-		return [param0, param1, param2]
+		return [param0, param1]
 
 	def isLicensed(self):
 		"""Set whether tool is licensed to execute."""
@@ -265,21 +258,13 @@ class Tool(object):
 
 		sys.setrecursionlimit(10000)
 
-		startX = 117
-		startY = 56
+		startX = parameters[0].value
+		startY = parameters[1].value
+
 		delta = 0.0008
 		file = "C:/arc/srtm_60_01/srtm_60_01.tif"
-		'''
-		Точки для тестирования(сейчас не используются)
-		all_points = {2:{2:{"height": 60}, 3:{"height": 70}, 4:{"height": 80}, 5:{"height": 60}},
-					  3:{2:{"height": 60}, 3:{"height": 110}, 4:{"height": 100}, 5:{"height": 80}},
-					  4:{2:{"height": 60}, 3:{"height": 80}, 4:{"height": 110}, 5:{"height": 80}},
-					  5:{2:{"height": 50}, 3:{"height": 60}, 4:{"height": 60}, 5:{"height": 60}}}
-		filled_points = {3:{4:{"height": 100}}}
-		'''
 
 		all_points = self.heightGrid(startX, startY, delta, file)
-		#self.print_points(all_points)
 		filled_points = {100:{}}
 		filled_points[100][100] = all_points[100][100]
 		total_v = 1000
