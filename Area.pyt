@@ -45,8 +45,24 @@ class Tool(object):
 			direction="Input")
 			
 		param1.value = 56
+
+		param2 = arcpy.Parameter(
+			displayName="Grid pitch",
+			name="delta",
+			datatype="GPDouble",
+			parameterType="Required",
+			direction="Input")
+
+		param2.value = 0.0008
+
+		param3 = arcpy.Parameter(
+			displayName="Terrain heights file",
+			name="file",
+			datatype="DEFile",
+			parameterType="Required",
+			direction="Input")
 			
-		return [param0, param1]
+		return [param0, param1, param2, param3]
 
 	def isLicensed(self):
 		"""Set whether tool is licensed to execute."""
@@ -255,14 +271,12 @@ class Tool(object):
 		return i
 
 	def execute(self, parameters, messages):
-
 		sys.setrecursionlimit(10000)
 
 		startX = parameters[0].value
 		startY = parameters[1].value
-
-		delta = 0.0008
-		file = "C:/arc/srtm_60_01/srtm_60_01.tif"
+		delta = parameters[2].value
+		file = parameters[3].value
 
 		all_points = self.heightGrid(startX, startY, delta, file)
 		filled_points = {100:{}}
