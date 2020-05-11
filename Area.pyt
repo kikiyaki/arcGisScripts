@@ -17,6 +17,9 @@ class Toolbox(object):
 class Tool(object):
 	filled_points_len = -1
 	new_filled_points_len = 0
+	# Default values
+	x_number = 200
+	y_number = 200
 	i = 0
 
 	def __init__(self):
@@ -61,8 +64,53 @@ class Tool(object):
 			datatype="DEFile",
 			parameterType="Required",
 			direction="Input")
+
+		param4 = arcpy.Parameter(
+			displayName="Total volume",
+			name="total_v",
+			datatype="GPDouble",
+			parameterType="Required",
+			direction="Input")
+
+		param4.value = 1000
+
+		param5 = arcpy.Parameter(
+			displayName="Elemental volume",
+			name="delta_v",
+			datatype="GPDouble",
+			parameterType="Required",
+			direction="Input")
+
+		param5.value = 1
+
+		param6 = arcpy.Parameter(
+			displayName="Points number X-axis",
+			name="x_number",
+			datatype="GPLong",
+			parameterType="Required",
+			direction="Input")
+
+		param6.value = 200
+
+		param7 = arcpy.Parameter(
+			displayName="Points number Y-axis",
+			name="y_number",
+			datatype="GPLong",
+			parameterType="Required",
+			direction="Input")
+
+		param7.value = 200
 			
-		return [param0, param1, param2, param3]
+		return [
+			param0,
+			param1,
+			param2,
+			param3,
+			param4,
+			param5,
+			param6,
+			param7
+		]
 
 	def isLicensed(self):
 		"""Set whether tool is licensed to execute."""
@@ -107,14 +155,14 @@ class Tool(object):
 		:param file: полный путь к файлу из которого берутся высоты
 		"""
 		points = {}
-		
-		for x in range(201):
+
+		for x in range(self.x_number + 1):
 			points[x] = {}
-			for y in range(201):
-				result = arcpy.GetCellValue_management(file, str(startX+delta*(x-100)) + " " + str(startY+delta*(y-100)))
+			for y in range(self.y_number + 1):
+				result = arcpy.GetCellValue_management(str(file), str(startX+delta*(x - self.x_number/2)) + " " + str(startY+delta*(y - self.y_number/2)))
 				height = int(result.getOutput(0))
 				point = {
-					"coord" : {"x" : startX+delta*(x-100), "y" : startY+delta*(y-100)},
+					"coord" : {"x" : startX+delta*(x - self.x_number/2), "y" : startY+delta*(y - self.y_number/2)},
 					"height" : height
 					}
 				points[x][y] = point
@@ -273,17 +321,26 @@ class Tool(object):
 	def execute(self, parameters, messages):
 		sys.setrecursionlimit(10000)
 
-		startX = parameters[0].value
-		startY = parameters[1].value
+		start_x_coord = parameters[0].value
+		start_y_coord = parameters[1].value
 		delta = parameters[2].value
 		file = parameters[3].value
+		total_v = parameters[4].value
+		delta_v = parameters[5].value
+		self.x_number = parameters[6].value
+		self.y_number = parameters[7].value
+		if self.x_number % 2 == 1:
+			self.x_number = self.x_number + 1
+		if self.y_number % 2 == 1:
+			self.y_number = self.y_number + 1
+		start_x = self.x_number / 2
+		start_y = self.y_number / 2
 
-		all_points = self.heightGrid(startX, startY, delta, file)
-		filled_points = {100:{}}
-		filled_points[100][100] = all_points[100][100]
-		total_v = 1000
-		delta_v = 1
-		filled_points = self.filled_points(all_points,filled_points,total_v,delta_v)
+		all_points = self.heightGrid(start_x_coord, start_y_coord, delta, file)
+		filled_points = {start_x:{}}
+		filled_points[start_x][start_y] = all_points[start_x][start_y]
+
+		filled_points = self.filled_points(all_points, filled_points, total_v, delta_v)
 		self.draw_filled_points(filled_points)
 
 		return
