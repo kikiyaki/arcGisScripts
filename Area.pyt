@@ -29,8 +29,6 @@ class Tool(object):
 		self.canRunInBackground = False
 
 	def getParameterInfo(self):
-	#Define parameter definitions
-	# First parameter
 		param0 = arcpy.Parameter(
 			displayName="Start point X coordinate",
 			name="x0",
