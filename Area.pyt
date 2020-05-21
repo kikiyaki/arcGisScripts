@@ -1,5 +1,6 @@
 import arcpy
 import math
+from math import radians, cos, sin, asin, sqrt
 import time
 import sys
 
@@ -316,6 +317,22 @@ class Tool(object):
 				i = i + 1
 		return i
 
+	def haversine(self, lon1, lat1, lon2, lat2):
+		"""
+        По формуле гаверсинусов считает расстояние в километрах
+        между двумя точками по их десятичным координатам
+        """
+		# convert decimal degrees to radians
+		lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+		# haversine formula
+		dlon = lon2 - lon1
+		dlat = lat2 - lat1
+		a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+		c = 2 * asin(sqrt(a))
+		r = 6371  # Radius of earth in kilometers. Use 3956 for miles
+		return c * r
+
 	def execute(self, parameters, messages):
 		sys.setrecursionlimit(10000)
 
@@ -335,11 +352,19 @@ class Tool(object):
 		start_y = self.y_number / 2
 
 		all_points = self.heightGrid(start_x_coord, start_y_coord, delta, file)
+		self.draw_all_points(all_points)
 		filled_points = {start_x:{}}
 		filled_points[start_x][start_y] = all_points[start_x][start_y]
 
 		filled_points = self.filled_points(all_points, filled_points, total_v, delta_v)
 		self.draw_filled_points(filled_points)
+
+		delta_km = self.haversine(0, 0, 0, delta)
+		one_point_area = delta_km * delta_km
+		total_area = one_point_area * self.points_count(filled_points)
+
+		arcpy.AddMessage("Total area:")
+		arcpy.AddMessage(total_area)
 
 		return
 
